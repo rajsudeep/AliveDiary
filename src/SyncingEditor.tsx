@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { Slate, Editable, withReact } from 'slate-react';
-import Mitt from 'mitt';
 import { createEditor } from 'slate';
 import { initialValue } from './slateInitialValue';
+import io from 'socket.io-client';
+
+const socket = io('http://localhost:4000');
 
 interface Props {}
-
-const emitter = Mitt();
 
 export const SyncingEditor: React.FC<Props> = () => {
     const editor = useMemo(() => withReact(createEditor()), []);
@@ -15,27 +15,24 @@ export const SyncingEditor: React.FC<Props> = () => {
     const remote = useRef(false);
 
     useEffect(() => {
-        (emitter as any).on('*', (type: string, newValue: any) => {
-            if (id.current !== type) {
+        socket.on('new-remote-values', ({editorId, newValue}: {editorId: string, newValue: any}) => {
+            if (id.current !== editorId) {
                 remote.current = true;
                 setValue(newValue);
-                console.log('change happened in other editor');
                 remote.current = false;
             }
         })
-    }, [])
+    }, []);
+
+    const onChangeSlate = (newValue: any) => {
+        setValue(newValue);
+        if (newValue !== value && !remote.current) {
+            socket.emit('new-values', { editorId: id.current, newValue: newValue });
+        }
+    };
 
     return (
-        <Slate 
-            editor={editor} 
-            value={value} 
-            onChange={newValue => {
-                setValue(newValue);
-                if (newValue !== value && !remote.current) {
-                    emitter.emit(id.current, newValue);
-                }
-            }}
-        >
+        <Slate editor={editor} value={value} onChange={onChangeSlate}>
             <Editable
                 style={{
                     backgroundColor: '#E7EEE7',
