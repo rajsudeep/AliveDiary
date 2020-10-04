@@ -27,7 +27,10 @@ export const SyncingEditor: React.FC<Props> = () => {
     const onChangeSlate = (newValue: any) => {
         setValue(newValue);
         if (newValue !== value && !remote.current) {
-            socket.emit('new-values', { editorId: id.current, newValue: newValue });
+            socket.emit('new-values', { 
+                editorId: id.current, 
+                newValue: newValue 
+            });
         }
     };
 
